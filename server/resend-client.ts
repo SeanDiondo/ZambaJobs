@@ -1,3 +1,4 @@
+console.log('DEBUG: Resend client loading - v3.0 - FORCE REBUILD');
 import { Resend } from 'resend';
 
 let connectionSettings: any;
