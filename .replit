@@ -6,9 +6,9 @@ expertMode = true
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "cloudrun"
+deploymentTarget = "autoscale"
 build = ["sh", "-c", "npm run build"]
-run = ["sh", "-c", "npm start"]
+run = ["npm", "start"]
 
 [[ports]]
 localPort = 5000
