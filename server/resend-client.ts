@@ -1,4 +1,4 @@
-console.log('DEBUG: Resend client loading - v3.0 - FORCE REBUILD');
+console.log('DEBUG: Resend client loading - v3.1 - FIXED EMAIL DOMAIN');
 import { Resend } from 'resend';
 
 let connectionSettings: any;
