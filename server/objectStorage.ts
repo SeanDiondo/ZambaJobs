@@ -123,6 +123,13 @@ export class ObjectStorageService {
       );
     }
 
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev && process.env.REPL_ID && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+       const objectId = randomUUID();
+       const uploadPath = targetPath || `/uploads/${objectId}`;
+       return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/local-upload${privateObjectDir}${uploadPath}`;
+    }
+
     let fullPath: string;
     if (targetPath) {
       // Use provided target path (user-scoped)
@@ -260,22 +267,26 @@ async function signObjectURL({
 }): Promise<string> {
   // Always use direct GCP connection if available
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    const action: "write" | "read" | "delete" = method === 'PUT' ? 'write' : method === 'GET' ? 'read' : 'delete';
     const options = {
       version: 'v4' as const,
-      action: method === 'PUT' ? 'write' : method === 'GET' ? 'read' : 'delete',
+      action,
       expires: Date.now() + ttlSec * 1000,
-      bucket: bucketName,
-      key: objectName,
     };
     
-    const url = await objectStorageClient.bucket(bucketName).file(objectName).getSignedUrl(options);
-    return url[0];
+    const [url] = await objectStorageClient.bucket(bucketName).file(objectName).getSignedUrl(options);
+    return url;
   }
   
   // For development/testing on Replit, if sidecar fails or we want to avoid identity mismatch,
-  // we can use the @replit/object-storage library if configured, or just mock it.
-  // Given the error "replid mismatch", we should favor GCP if possible or fix the sidecar call.
-  // However, the sidecar is usually the right way on Replit.
+  // we can use a local upload directory as a fallback.
+  const isDev = process.env.NODE_ENV === 'development';
+  if (isDev && process.env.REPL_ID && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+     const objectId = randomUUID();
+     const uploadPath = targetPath || `/uploads/${objectId}`;
+     const privateObjectDir = this.getPrivateObjectDir();
+     return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/local-upload${privateObjectDir}${uploadPath}`;
+  }
   
   const request = {
     bucket_name: bucketName,

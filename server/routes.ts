@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import fs from "fs";
+import path from "path";
 import { 
   hashPassword, 
   comparePassword, 
@@ -73,6 +75,34 @@ function noCacheMiddleware(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add local upload endpoint for development
+  app.put("/api/local-upload/*", async (req: any, res) => {
+    try {
+      const filePath = req.params[0];
+      const fullPath = path.join(process.cwd(), "uploads", filePath);
+      const dir = path.dirname(fullPath);
+      
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      const writeStream = fs.createWriteStream(fullPath);
+      req.pipe(writeStream);
+      
+      writeStream.on("finish", () => {
+        res.json({ message: "Upload successful" });
+      });
+      
+      writeStream.on("error", (err) => {
+        console.error("Local upload error:", err);
+        res.status(500).json({ message: "Upload failed" });
+      });
+    } catch (error) {
+      console.error("Local upload route error:", error);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
   // Set up Replit Auth (includes session setup)
   await setupAuth(app);
   
